@@ -33,11 +33,14 @@ pipeline {
 
     stage('Build & Push Image') {
       steps {
-        sh '''
-          docker build -t "${ECR_REPO}:latest" .
-          docker tag "${ECR_REPO}:latest" "${IMAGE_URI}"
-          docker push "${IMAGE_URI}"
-        '''
+          sh '''
+      DOCKERFILE=app/Dockerfile
+      CONTEXT=app
+
+      docker build -f "$DOCKERFILE" -t "${ECR_REPO}:${IMAGE_TAG}" "$CONTEXT"
+      docker tag "${ECR_REPO}:${IMAGE_TAG}" "${IMAGE_URI}"
+      docker push "${IMAGE_URI}"
+    '''
       }
     }
 
