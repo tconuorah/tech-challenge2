@@ -65,17 +65,6 @@ pipeline {
         '''
       }
     }
-
-    stage('Deploy (Helm - optional)') {
-      when { expression { fileExists('helm') } }
-      steps {
-        sh '''
-          helm upgrade --install hello ./helm \
-            --set image.repository="${ECR_REGISTRY}/${ECR_REPO}" \
-            --set image.tag="${IMAGE_TAG}"
-        '''
-      }
-    }
   }
 
   post {
