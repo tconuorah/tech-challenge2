@@ -9,10 +9,10 @@ pipeline {
   }
 
   environment {
-    ECR_REGISTRY = "${params.AWS_ACCOUNT_ID}.dkr.ecr.${params.AWS_REGION}.amazonaws.com"
-    IMAGE_TAG    = "${env.BUILD_NUMBER}"
-    IMAGE_URI    = "${env.ECR_REGISTRY}/${params.ECR_REPO}:${env.IMAGE_TAG}"
-    AWS_DEFAULT_REGION = "${params.AWS_REGION}"
+    ECR_REGISTRY      = "${params.AWS_ACCOUNT_ID}.dkr.ecr.${params.AWS_REGION}.amazonaws.com"
+    AWS_DEFAULT_REGION= "${params.AWS_REGION}"
+    IMAGE_TAG         = "${env.BUILD_NUMBER}"
+    IMAGE_URI         = "${env.ECR_REGISTRY}/${params.ECR_REPO}:${env.IMAGE_TAG}"
   }
 
   stages {
@@ -23,52 +23,63 @@ pipeline {
     stage('Login to ECR') {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
-  sh '''
-    aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" \
-      | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
-  '''
+          sh '''
+            set -e
+            aws ecr describe-repositories --repository-names "${ECR_REPO}" >/dev/null 2>&1 || \
+              aws ecr create-repository --repository-name "${ECR_REPO}"
+
+            aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" \
+              | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+          '''
         }
       }
     }
 
     stage('Build & Push Image') {
       steps {
+        dir('app') {
           sh '''
-      DOCKERFILE=app/Dockerfile
-      CONTEXT=app
-
-      docker build -f "$DOCKERFILE" -t "${ECR_REPO}:${IMAGE_TAG}" "$CONTEXT"
-      docker tag "${ECR_REPO}:${IMAGE_TAG}" "${IMAGE_URI}"
-      docker push "${IMAGE_URI}"
-    '''
+            set -e
+            docker build -t "${ECR_REPO}:${IMAGE_TAG}" .
+          '''
+        }
+        sh '''
+          set -e
+          docker tag "${ECR_REPO}:${IMAGE_TAG}" "${IMAGE_URI}"
+          docker push "${IMAGE_URI}"
+        '''
       }
     }
 
-   stage('Kubeconfig') {
-  steps {
-    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
-      sh '''
-        export AWS_REGION="${AWS_DEFAULT_REGION}"
-        export KUBECONFIG="${WORKSPACE}/kubeconfig"
-        aws sts get-caller-identity
-        aws eks update-kubeconfig --name "${CLUSTER_NAME}" --region "${AWS_REGION}" --kubeconfig "$KUBECONFIG" --alias jenkins
-        kubectl --kubeconfig "$KUBECONFIG" get nodes
-      '''
+    stage('Kubeconfig') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          sh '''
+            set -e
+            export KUBECONFIG="${WORKSPACE}/kubeconfig"
+            aws eks update-kubeconfig --name "${CLUSTER_NAME}" --region "${AWS_DEFAULT_REGION}" --kubeconfig "$KUBECONFIG" --alias jenkins
+            kubectl --kubeconfig "$KUBECONFIG" get nodes
+          '''
+        }
+      }
     }
-  }
-}
 
-stage('Deploy (kubectl)') {
-  steps {
-    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
-      sh '''
-        export AWS_REGION="${AWS_DEFAULT_REGION}"     # needed because kubectl exec plugin calls aws
-        export KUBECONFIG="${WORKSPACE}/kubeconfig"
-        # kubectl/helm commands here, same as above
-      '''
+    stage('Deploy (kubectl)') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          sh '''
+            set -e
+            export KUBECONFIG="${WORKSPACE}/kubeconfig"
+            # Apply manifests under k8s/
+            kubectl --kubeconfig "$KUBECONFIG" apply -f k8s/
+            # If your Deployment is named "hello" with container "hello":
+            kubectl --kubeconfig "$KUBECONFIG" set image deployment/hello hello="${IMAGE_URI}" -n default || true
+            kubectl --kubeconfig "$KUBECONFIG" rollout status deployment/hello -n default --timeout=120s || true
+          '''
+        }
+      }
     }
   }
-}
 
   post {
     always {
