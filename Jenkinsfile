@@ -44,30 +44,31 @@ pipeline {
       }
     }
 
-    stage('Kubeconfig') {
-      steps {
-        sh '''
-          aws eks update-kubeconfig --name "${CLUSTER_NAME}" --region "${AWS_DEFAULT_REGION}"
-          kubectl get nodes
-        '''
-      }
-    }
-
-    stage('Deploy (kubectl)') {
-      when { expression { fileExists('k8s') } }
-      steps {
-        sh '''
-          # Apply all YAMLs in ./k8s (deployment.yaml, service.yaml, etc.)
-          kubectl apply -f k8s/
-
-          # If you have a Deployment named "hello-deploy" and container "app":
-          kubectl set image deployment/hello-deploy app="${IMAGE_URI}" || true
-
-          kubectl rollout status deployment/hello-deploy --timeout=5m || true
-        '''
-      }
+   stage('Kubeconfig') {
+  steps {
+    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+      sh '''
+        export AWS_REGION="${AWS_DEFAULT_REGION}"
+        export KUBECONFIG="${WORKSPACE}/kubeconfig"
+        aws sts get-caller-identity
+        aws eks update-kubeconfig --name "${CLUSTER_NAME}" --region "${AWS_REGION}" --kubeconfig "$KUBECONFIG" --alias jenkins
+        kubectl --kubeconfig "$KUBECONFIG" get nodes
+      '''
     }
   }
+}
+
+stage('Deploy (kubectl)') {
+  steps {
+    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+      sh '''
+        export AWS_REGION="${AWS_DEFAULT_REGION}"     # needed because kubectl exec plugin calls aws
+        export KUBECONFIG="${WORKSPACE}/kubeconfig"
+        # kubectl/helm commands here, same as above
+      '''
+    }
+  }
+}
 
   post {
     always {
