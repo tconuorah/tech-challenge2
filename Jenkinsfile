@@ -22,12 +22,11 @@ pipeline {
 
     stage('Login to ECR') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'aws-creds', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-          sh '''
-            aws ecr describe-repositories --repository-names "${ECR_REPO}" >/dev/null 2>&1 || \
-              aws ecr create-repository --repository-name "${ECR_REPO}" >/dev/null
-            aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
-          '''
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+  sh '''
+    aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" \
+      | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+  '''
         }
       }
     }
