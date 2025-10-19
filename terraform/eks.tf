@@ -10,7 +10,8 @@ module "eks" {
   cluster_endpoint_private_access = false
 
   vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.public_subnets
+  subnet_ids = module.vpc.private_subnets
+  
 
   enable_irsa = true
 
@@ -20,11 +21,12 @@ module "eks" {
       min_size       = var.min_size
       desired_size   = var.desired_size
       max_size       = var.max_size
-      subnet_ids     = module.vpc.public_subnets
+      subnet_ids     = module.vpc.private_subnets
       attach_cluster_primary_security_group = true
     }
   }
-
+  
+  
   # Optional tags
   tags = { Project = "TC2", Env = "dev" }
 }
