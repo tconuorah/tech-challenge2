@@ -1,0 +1,22 @@
+replicaCount: 1
+
+image:
+  repository: 899631475351.dkr.ecr.us-east-1.amazonaws.com/bootcamp-project-app
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: LoadBalancer
+  port: 80
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: 80
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 80
