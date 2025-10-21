@@ -31,7 +31,6 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   role       = aws_iam_role.eks_cluster_role.name
 }
 
-data "aws_caller_identity" "me" {}
 
 resource "aws_iam_role" "eks_admin" {
   name = "EKSAdminRole"
@@ -46,14 +45,21 @@ resource "aws_iam_role" "eks_admin" {
   })
 }
 
-# (Optional) lets callers run update-kubeconfig
-resource "aws_iam_role_policy" "eks_describe" {
-  name = "EKSDescribeClusterOnly"
-  role = aws_iam_role.eks_admin.id
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{ Effect="Allow", Action=["eks:DescribeCluster"], Resource="*" }]
-  })
-}
+data "aws_caller_identity" "me" {}
 
+module "aws_auth" {
+  source  = "terraform-aws-modules/eks/aws//modules/aws-auth"
+  version = "20.31.6"
+
+  depends_on   = [module.eks]                 # ensure cluster exists first
+  manage_aws_auth_configmap = true           # this module manages it
+
+  aws_auth_roles = [
+    {
+      rolearn  = aws_iam_role.eks_admin.arn
+      username = "admin:{{SessionName}}"
+      groups   = ["system:masters"]          # cluster-admin
+    }
+  ]
+}
 

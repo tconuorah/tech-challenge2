@@ -14,6 +14,7 @@ module "eks" {
   
 
   enable_irsa = true
+  
 
   eks_managed_node_groups = {
     default = {
