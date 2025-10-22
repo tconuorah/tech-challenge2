@@ -11,10 +11,11 @@ pipeline {
   }
 
   stages {
-
-    stages {
     stage('Checkout') {
-      steps { checkout scm }
+      steps {
+        git branch: 'main',
+            url: 'https://github.com/tconuorah/tech-challenge2'
+      }
     }
 
     stage('Build Docker Image') {
@@ -32,8 +33,8 @@ pipeline {
       steps {
         powershell '''
           $ErrorActionPreference = "Stop"
-          $password = aws ecr get-login-password --region $env:AWS_DEFAULT_REGION
           $registry = "$($env:AWS_ACCOUNT_ID).dkr.ecr.$($env:AWS_DEFAULT_REGION).amazonaws.com"
+          $password = aws ecr get-login-password --region $env:AWS_DEFAULT_REGION
           $password | docker login --username AWS --password-stdin $registry
           docker push "$registry/$($env:ECR_REPO):$($env:IMAGE_TAG)"
         '''
@@ -45,7 +46,6 @@ pipeline {
         powershell '''
           $ErrorActionPreference = "Stop"
           aws eks update-kubeconfig --name $env:CLUSTER_NAME --region $env:AWS_DEFAULT_REGION
-
           $registry = "$($env:AWS_ACCOUNT_ID).dkr.ecr.$($env:AWS_DEFAULT_REGION).amazonaws.com"
           helm upgrade --install $env:CHART_NAME ./helm-chart `
             --set "image.repository=$registry/$($env:ECR_REPO)" `
