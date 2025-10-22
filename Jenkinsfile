@@ -20,43 +20,27 @@ pipeline {
 
     stage('Build Docker Image') {
       steps {
-        sh '''
-          set -euo pipefail
-          docker build -t "${ECR_REPO}:${IMAGE_TAG}" .
-          docker tag "${ECR_REPO}:${IMAGE_TAG}" "${REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
-        '''
+        sh 'bash -lc "set -euo pipefail; docker build -t \\"${ECR_REPO}:${IMAGE_TAG}\\" .; docker tag \\"${ECR_REPO}:${IMAGE_TAG}\\" \\"${REGISTRY}/${ECR_REPO}:${IMAGE_TAG}\\""'
       }
     }
 
     stage('Push to ECR') {
       steps {
-        sh '''
-          set -euo pipefail
-          aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" \
-            | docker login --username AWS --password-stdin "${REGISTRY}"
-          docker push "${REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
-        '''
+        sh 'bash -lc "set -euo pipefail; aws ecr get-login-password --region \\"${AWS_DEFAULT_REGION}\\" | docker login --username AWS --password-stdin \\"${REGISTRY}\\"; docker push \\"${REGISTRY}/${ECR_REPO}:${IMAGE_TAG}\\" "'
       }
     }
 
     stage('Deploy to EKS via Helm') {
       steps {
-        sh '''
-          set -euo pipefail
-          aws eks update-kubeconfig --name "${CLUSTER_NAME}" --region "${AWS_DEFAULT_REGION}"
-          helm upgrade --install "${CHART_NAME}" ./helm-chart \
-            --set image.repository="${REGISTRY}/${ECR_REPO}" \
-            --set image.tag="${IMAGE_TAG}" \
-            --set service.type=LoadBalancer \
-            --set service.port=80
-        '''
+        sh 'bash -lc "set -euo pipefail; aws eks update-kubeconfig --name \\"${CLUSTER_NAME}\\" --region \\"${AWS_DEFAULT_REGION}\\"; helm upgrade --install \\"${CHART_NAME}\\" ./helm-chart --set image.repository=\\"${REGISTRY}/${ECR_REPO}\\" --set image.tag=\\"${IMAGE_TAG}\\" --set service.type=LoadBalancer --set service.port=80 "'
       }
     }
   }
 
   post {
     always {
-      sh 'docker system prune -af || true'
+      // will succeed once Docker perms are fixed
+      sh 'bash -lc "docker system prune -af || true"'
     }
   }
 }
