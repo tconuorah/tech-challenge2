@@ -1,15 +1,15 @@
-
-output "ecr_hello_app_repository_name" {
-  value       = aws_ecr_repository.hello_app.name
-  description = "ECR repository name"
+output "cluster_name" {
+  value = aws_eks_cluster.eks.name
 }
 
-output "ecr_hello_app_repository_url" {
-  value       = aws_ecr_repository.hello_app.repository_url
-  description = "ECR repository URL (push/pull endpoint)"
+output "cluster_endpoint" {
+  value = aws_eks_cluster.eks.endpoint
 }
 
-output "ecr_hello_app_repository_arn" {
-  value       = aws_ecr_repository.hello_app.arn
-  description = "ECR repository ARN"
+output "cluster_ca" {
+  value = aws_eks_cluster.eks.certificate_authority[0].data
+}
+
+output "nodegroup_role_arn" {
+  value = aws_iam_role.eks_node_role.arn
 }

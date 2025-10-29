@@ -1,9 +1,10 @@
 resource "aws_ecr_repository" "hello_app" {
-  name                 = "hello-app"
-  image_tag_mutability = "IMMUTABLE"
+  name         = "hello-app"
+  force_delete = true
 
   image_scanning_configuration {
     scan_on_push = true
+
   }
 
   encryption_configuration {
@@ -11,9 +12,9 @@ resource "aws_ecr_repository" "hello_app" {
     # kms_key       = aws_kms_key.ecr.arn
   }
 
+
   tags = {
-    Project = "TC2"
-    Env     = "dev"
+    name = "prod"
   }
 }
 
