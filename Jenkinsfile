@@ -2,56 +2,45 @@ pipeline {
   agent any
 
   environment {
-    AWS_DEFAULT_REGION = 'us-east-2'
-    AWS_ACCOUNT_ID     = '521037247172'
-    ECR_REPO           = 'hello-app'
-    IMAGE_TAG          = "${env.BUILD_NUMBER}"
-    CLUSTER_NAME       = 'tc2-eks'
-    CHART_NAME         = 'hello-app'
+    AWS_REGION = 'us-east-2'
+    ECR_REPO = '022440376442.dkr.ecr.us-east-2.amazonaws.com/hello-app'
+    CLUSTER_NAME = 'eks-cluster'
   }
 
   stages {
-
-    stage('Checkout') {
+    stage('Checkout Code') {
       steps {
-        git branch: 'main',
-            url: 'https://github.com/tconuorah/tech-challenge2'
+        checkout scm
       }
     }
 
     stage('Build Docker Image') {
       steps {
-        script {
-          sh '''
-          docker build -t $ECR_REPO:$IMAGE_TAG .
-          docker tag $ECR_REPO:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
-          '''
-        }
+        sh '''
+          docker build -t $ECR_REPO:latest ./app
+        '''
       }
     }
 
     stage('Push to ECR') {
       steps {
-        script {
+        withAWS(region: "$AWS_REGION", credentials: 'aws-creds') {
           sh '''
-          aws ecr get-login-password --region $AWS_DEFAULT_REGION \
-            | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+            aws ecr get-login-password --region $AWS_REGION | \
+            docker login --username AWS --password-stdin $ECR_REPO
+            docker push $ECR_REPO:latest
           '''
         }
       }
     }
 
-    stage('Deploy to EKS via Helm') {
+    stage('Deploy to EKS') {
       steps {
-        script {
+        withAWS(region: "$AWS_REGION", credentials: 'aws-creds') {
           sh '''
-          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_DEFAULT_REGION
-          helm upgrade --install $CHART_NAME ./helm-chart \
-            --set image.repository=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO \
-            --set image.tag=$IMAGE_TAG \
-            --set service.type=LoadBalancer \
-            --set service.port=80
+            aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+            helm upgrade --install hello-world ./helm/hello-world \
+              --set image.repository=$ECR_REPO,image.tag=latest
           '''
         }
       }
@@ -59,8 +48,11 @@ pipeline {
   }
 
   post {
-    always {
-      sh 'docker system prune -af || true'
+    success {
+      echo "✅ Deployment successful!"
+    }
+    failure {
+      echo "❌ Deployment failed!"
     }
   }
 }
