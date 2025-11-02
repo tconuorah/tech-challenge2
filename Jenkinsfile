@@ -39,7 +39,7 @@ pipeline {
         withAWS(region: "$AWS_REGION", credentials: 'aws-creds') {
           sh '''
             aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
-            helm upgrade --install hello-world ./helm/hello-world \
+            helm upgrade --install hello-app ./helm/hello-app \
               --set image.repository=$ECR_REPO,image.tag=latest
           '''
         }
