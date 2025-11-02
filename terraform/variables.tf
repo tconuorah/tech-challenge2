@@ -1,41 +1,29 @@
 variable "region" {
-  type    = string
-  default = "us-east-2"
+  description = "AWS region"
+  type        = string
+  default     = "us-east-2"
 }
 
-variable "aws_profile" {
-  type    = string
-  default = "tc2"
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
 }
 
 variable "cluster_name" {
-  type    = string
-  default = "tc2-eks"
+  description = "Name of the EKS cluster"
+  type        = string
+  default     = "eks-cluster"
 }
 
-variable "cluster_version" {
-  type    = string
-  default = "1.29"
+variable "node_group_name" {
+  description = "Name of the EKS node group"
+  type        = string
+  default     = "eks-node-group"
 }
 
-# Desired node group size & instance type
-variable "min_size" {
-  type    = number
-  default = 3
-}
-
-variable "desired_size" {
-  type    = number
-  default = 3
-}
-
-variable "max_size" {
-  type    = number
-  default = 4
-}
-
-variable "instance_type" {
-  type    = string
-  default = "t3.large"
-}
-
+variable "node_name_pattern" {
+  description = "Pattern for naming EKS worker nodes"
+  type        = string
+  default     = "EKS-App-Worker Node"
+} 

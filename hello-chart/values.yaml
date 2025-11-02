@@ -1,13 +1,17 @@
 replicaCount: 1
 
 image:
-  repository: 521037247172.dkr.ecr.us-east-2.amazonaws.com/hello-app
+  repository: 965317436380.dkr.ecr.us-east-2.amazonaws.com/hello-app
   tag: "latest"
   pullPolicy: IfNotPresent
 
 service:
+  type: LoadBalancer
   port: 80
   targetPort: 8080
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
 
 resources:
   requests:
@@ -24,7 +28,7 @@ hpa:
   targetMemoryUtilizationPercentage: 50
 
 ingress:
-  enabled: true
+  enabled: false
   host: ""  # replace w/ real domain or leave blank to just get ALB DNS
   annotations:
     kubernetes.io/ingress.class: alb

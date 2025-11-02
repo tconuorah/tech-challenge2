@@ -1,15 +1,24 @@
-output "cluster_name" {
-  value = aws_eks_cluster.eks.name
+output "vpc_id" {
+  description = "The ID of the VPC"
+  value       = aws_vpc.main.id
 }
 
-output "cluster_endpoint" {
-  value = aws_eks_cluster.eks.endpoint
+output "eks_cluster_endpoint" {
+  description = "The endpoint for the EKS cluster"
+  value       = aws_eks_cluster.main.endpoint
 }
 
-output "cluster_ca" {
-  value = aws_eks_cluster.eks.certificate_authority[0].data
+output "eks_cluster_name" {
+  description = "The name of the EKS cluster"
+  value       = aws_eks_cluster.main.name
 }
 
-output "nodegroup_role_arn" {
-  value = aws_iam_role.eks_node_role.arn
+output "jenkins_master_public_ip" {
+  description = "The public IP of the Jenkins master node"
+  value       = aws_instance.jenkins_master.public_ip
 }
+
+output "ecr_repository_url" {
+  description = "The URL of the ECR repository"
+  value       = aws_ecr_repository.app.repository_url
+} 
