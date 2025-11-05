@@ -1,13 +1,13 @@
 # VPC Configuration
 resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
+  cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
-
   tags = {
-    Name = "eks-vpc"
+    Name = "${var.cluster_name}-vpc"
   }
 }
+
 
 # Public Subnets
 resource "aws_subnet" "public" {
@@ -36,11 +36,13 @@ resource "aws_subnet" "private" {
 }
 
 # Internet Gateway
-resource "aws_internet_gateway" "main" {
+resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
+  tags = { Name = "${var.cluster_name}-igw" }
 
-  tags = {
-    Name = "eks-igw"
+  # helps when something re-creates dependencies, ensures proper wait
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
@@ -59,6 +61,10 @@ resource "aws_nat_gateway" "main" {
   tags = {
     Name = "eks-nat-${count.index + 1}"
   }
+  lifecycle {
+    create_before_destroy = true
+  }
+  depends_on = [ aws_internet_gateway.igw ]
 }
 
 # Route Tables
@@ -67,7 +73,7 @@ resource "aws_route_table" "public" {
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
+    gateway_id = aws_internet_gateway.igw.id
   }
 
   tags = {
@@ -247,3 +253,9 @@ resource "aws_network_acl_association" "private" {
   subnet_id      = aws_subnet.private[count.index].id
 }
 
+resource "null_resource" "pre_destroy_vpc_cleanup" {
+  triggers = {
+    vpc_id = aws_vpc.main.id
+    region = var.region
+  }
+}

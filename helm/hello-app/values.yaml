@@ -1,5 +1,5 @@
 # Default values for hello-world.
-replicaCount: 1
+replicaCount: 2
 
 image:
   repository: 022440376442.dkr.ecr.us-east-2.amazonaws.com/hello-app
@@ -58,10 +58,10 @@ readinessProbe:
     port: http
 
 autoscaling:
-  enabled: false
+  enabled: true
   minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
 
 volumes: []
 volumeMounts: []

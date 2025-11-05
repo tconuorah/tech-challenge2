@@ -156,7 +156,7 @@ resource "aws_iam_instance_profile" "eks_node_group" {
 # EKS Node Group
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
-  node_group_name = "eks-node-group"
+  node_group_name = "${var.cluster_name}-ng"
   node_role_arn   = aws_iam_role.eks_node_group.arn
   subnet_ids      = aws_subnet.private[*].id
 
@@ -199,11 +199,13 @@ resource "aws_eks_node_group" "main" {
 
 # Application Load Balancer
 resource "aws_lb" "eks" {
-  name               = "eks-alb"
+  name               = "${var.cluster_name}-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
   subnets            = aws_subnet.public[*].id
+  enable_deletion_protection = false
+  idle_timeout = 60
 
   tags = {
     Name = "eks-alb"
