@@ -11,7 +11,7 @@ spec:
     kind: Deployment
     name: hello-app
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 6
   metrics:
     - type: Resource
       resource:
